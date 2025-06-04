@@ -40,12 +40,9 @@ tasks.named('shadowJar', ShadowJar) {
                 'Main-Class': 'loutre.betterrise.EntryPoint'
         )
     }
-    relocate('sun.misc', 'aa.aa')
-    relocate("org.objectweb", "ab.ab")
-    relocate("com.google", "coam.google")
     mergeServiceFiles()
-    exclude 'META-INF/services/net.fabricmc.loader.impl.game.GameProvider'
 
+    exclude 'META-INF/services/net.fabricmc.loader.impl.game.GameProvider'
     from('src/main/resources/META-INF/services') {
         into('META-INF/services')
         include 'net.fabricmc.loader.impl.game.GameProvider'
@@ -56,6 +53,7 @@ tasks.named('shadowJar', ShadowJar) {
         into 'META-INF/services'
     }
 
+    relocate("org.objectweb", "ab.ab")
 }
 test {
     useJUnitPlatform()
