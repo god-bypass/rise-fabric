@@ -1,0 +1,8 @@
+[20:05:13] [ERROR] [FabricLoader/GameProvider]: None of the game providers (App, Minecraft) were able to locate their game!
+[20:05:13] [ERROR] [FabricLoader/]: Uncaught exception in thread "main"
+java.lang.RuntimeException: None of the game providers (App, Minecraft) were able to locate their game!
+	at net.fabricmc.loader.impl.launch.knot.Knot.createGameProvider(Knot.java:209)
+	at net.fabricmc.loader.impl.launch.knot.Knot.init(Knot.java:125)
+	at net.fabricmc.loader.impl.launch.knot.Knot.launch(Knot.java:71)
+	at net.fabricmc.loader.impl.launch.knot.KnotClient.main(KnotClient.java:23)
+	at loutre.betterrise.EntryPoint.main(EntryPoint.java:6)
