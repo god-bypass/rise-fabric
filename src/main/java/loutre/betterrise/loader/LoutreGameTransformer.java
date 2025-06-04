@@ -29,9 +29,6 @@ public class LoutreGameTransformer extends GameTransformer {
 
     public LoutreGameTransformer(GamePatch... patches) {
         this.patches = Arrays.asList(patches);
-        System.out.println("asas");
-        System.out.println("asas");
-
     }
 
     private void addPatchedClass(ClassNode node) {
@@ -85,12 +82,6 @@ public class LoutreGameTransformer extends GameTransformer {
 
 
     public byte[] transform(String className) {
-
-        if(className.contains(".Unsafe")){
-            System.out.println(className);
-            return null;
-        }
-
         return patchedClasses.get(className);
     }
 }

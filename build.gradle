@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'org.example'
-version = '1.0-SNAPSHOT'
+version = ''
 
 repositories {
     mavenCentral()
@@ -19,13 +19,17 @@ dependencies {
     compileOnly "org.projectlombok:lombok:${lombok_version}"
     annotationProcessor "org.projectlombok:lombok:${lombok_version}"
 
+    implementation 'org.slf4j:slf4j-api:2.0.9'
+    implementation 'org.apache.logging.log4j:log4j-slf4j-impl:2.20.0'
+    implementation 'org.apache.logging.log4j:log4j-core:2.20.0'
+
+    implementation("net.fabricmc:fabric-fernflower:2.0.0")
     implementation "net.fabricmc:fabric-loader:0.13.0"
-// https://mvnrepository.com/artifact/net.fabricmc/sponge-mixin
-    implementation("net.fabricmc:sponge-mixin:0.15.4+mixin.0.8.7")
+    implementation("net.fabricmc:sponge-mixin:0.13.0+mixin.0.8.5")
     implementation "net.fabricmc:access-widener:2.1.0"
     implementation "net.fabricmc:tiny-mappings-parser:0.2.2.14"
-    implementation "com.google.guava:guava:21.0"
-    implementation "com.google.code.gson:gson:2.8.7"
+    implementation 'com.google.guava:guava:32.0.1-android'
+    implementation 'com.google.code.gson:gson:2.8.9'
     implementation "org.ow2.asm:asm:9.8"
     implementation "org.ow2.asm:asm-analysis:9.8"
     implementation "org.ow2.asm:asm-commons:9.8"
@@ -34,18 +38,17 @@ dependencies {
 
 }
 tasks.named('shadowJar', ShadowJar) {
+    archiveClassifier.set('')
+    archiveVersion.set("")
 
     manifest {
         attributes(
                 'Main-Class': 'loutre.betterrise.EntryPoint'
         )
     }
-    relocate('sun.misc', 'aa.aa')
-    relocate("org.objectweb", "ab.ab")
-    relocate("com.google", "coam.google")
     mergeServiceFiles()
-    exclude 'META-INF/services/net.fabricmc.loader.impl.game.GameProvider'
 
+    exclude 'META-INF/services/net.fabricmc.loader.impl.game.GameProvider'
     from('src/main/resources/META-INF/services') {
         into('META-INF/services')
         include 'net.fabricmc.loader.impl.game.GameProvider'
@@ -55,7 +58,6 @@ tasks.named('shadowJar', ShadowJar) {
         include 'org.spongepowered.asm.service.IMixinService'
         into 'META-INF/services'
     }
-
 }
 test {
     useJUnitPlatform()
