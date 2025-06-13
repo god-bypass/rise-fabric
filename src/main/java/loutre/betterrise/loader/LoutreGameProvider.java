@@ -2,19 +2,18 @@ package loutre.betterrise.loader;
 
 import loutre.betterrise.EntryPoint;
 import loutre.betterrise.loader.patcher.EntrypointPatcher;
+import loutre.betterrise.loader.utils.Utils;
 import net.fabricmc.loader.impl.game.GameProvider;
 import net.fabricmc.loader.impl.game.patch.GameTransformer;
 import net.fabricmc.loader.impl.launch.FabricLauncher;
 import net.fabricmc.loader.impl.util.Arguments;
 import net.fabricmc.loader.impl.util.log.Log;
 import net.fabricmc.loader.impl.util.log.LogCategory;
-import net.fabricmc.loader.impl.util.log.LogHandler;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -92,49 +91,35 @@ public class LoutreGameProvider implements GameProvider {
             return false;
         }
 
-        String userHome = System.getProperty("user.home", ".");
-        String appData = System.getenv("APPDATA");
-        String basePath = (appData != null) ? appData : userHome;
-        File minecraftDir = new File(basePath, ".minecraft/");
-        this.gameDirectory = Path.of(minecraftDir.toURI());
+        this.gameDirectory = Path.of(Utils.getMinecraftDir().toURI());
 
-        try {
-            File currentDir = new File(LoutreGameProvider.class.getProtectionDomain()
-                    .getCodeSource().getLocation().toURI()).getParentFile();
+        File currentDir = Utils.getJar().toFile();
 
-            Path gameJar = new File(currentDir, "Standalone.jar").toPath();
-            Path libraryJar = new File(currentDir, "Libraries.jar").toPath();
-            Path netty = new File(currentDir, "../linux-x64/netty-all-4.0.23.Final.jar").toPath();
+        Path gameJar = new File(currentDir, "Standalone.jar").toPath();
+        Path libraryJar = new File(currentDir, "Libraries.jar").toPath();
 
-            if (!Files.exists(gameJar)) {
-                Log.error(LogCategory.GAME_PROVIDER, "Game JAR does not exist: %s", gameJar);
-                return false;
-            }
-
-            if (!Files.exists(libraryJar)) {
-                Log.error(LogCategory.GAME_PROVIDER, "Library JAR does not exist: %s", libraryJar);
-                return false;
-            }
-
-            patchLibraries(libraryJar);
-
-            jars.add(gameJar);
-            jars.add(libraryJar);
-            jars.add(netty);
-            transformer.locateEntrypoints(launcher, gameJar);
-            transformer.locateEntrypoints(launcher, netty);
-
-        } catch (URISyntaxException e) {
-            Log.error(LogCategory.GAME_PROVIDER, "Failed to locate game directory: %s", e);
+        if (!Files.exists(gameJar)) {
+            Log.error(LogCategory.GAME_PROVIDER, "Game JAR does not exist: %s", gameJar);
             return false;
         }
+
+        if (!Files.exists(libraryJar)) {
+            Log.error(LogCategory.GAME_PROVIDER, "Library JAR does not exist: %s", libraryJar);
+            return false;
+        }
+
+        patchLibraries(libraryJar);
+
+        jars.add(gameJar);
+        jars.add(libraryJar);
+        transformer.locateEntrypoints(launcher, gameJar);
 
         return true;
     }
 
     @Override
     public void initialize(FabricLauncher launcher) {
-        // setupLogHandler(launcher, true);
+
     }
 
     @Override
@@ -146,36 +131,31 @@ public class LoutreGameProvider implements GameProvider {
     public void unlockClassPath(FabricLauncher launcher) {
         for (Path path : jars) {
             launcher.addToClassPath(path);
-            transformer.locateEntrypoints(launcher, path);
         }
     }
 
     @Override
     public void launch(ClassLoader loader) {
         try {
-            String userHome = System.getProperty("user.home", ".");
-            String appData = System.getenv("APPDATA");
-            String basePath = (appData != null) ? appData : userHome;
-            File minecraftDir = new File(basePath, ".minecraft/");
+            Path minecraftDir = Utils.getMinecraftDir().toPath();
+            boolean isMac = System.getProperty("os.name").toLowerCase().contains("mac");
 
-            boolean isNotMac = !System.getProperty("os.name").toLowerCase().contains("mac");
-
-            String[] launchArgs = new String[]{
+            String[] launchArgs = {
                     "--version", "1.8",
                     "--accessToken", "0",
-                    isNotMac ? "--gameDir" : "",
-                    isNotMac ? new File(minecraftDir, ".").getAbsolutePath() : "",
-                    "--assetsDir", isNotMac ? new File(minecraftDir, "assets/").getAbsolutePath() : "assets",
+                    "--gameDir", !isMac ? minecraftDir.toString() : "",
+                    "--assetsDir", !isMac ? minecraftDir.resolve("assets").toString() : "assets",
                     "--assetIndex", "1.8",
                     "--userProperties", "{}",
                     "-Dfabric.mixin.debug", "true"
             };
+
             Class<?> mainClass = loader.loadClass(getEntrypoint());
             Method mainMethod = mainClass.getMethod("main", String[].class);
             mainMethod.invoke(null, (Object) launchArgs);
 
         } catch (Exception e) {
-            Log.error(LogCategory.GAME_PROVIDER, "Failed to launch game: %s", e);
+            Log.error(LogCategory.GAME_PROVIDER, "Game launch failed", e);
         }
     }
 
@@ -245,72 +225,47 @@ public class LoutreGameProvider implements GameProvider {
             Log.error(LogCategory.GAME_PROVIDER, "Failed to patch libraries.jar: %s", e);
         }
     }
-    @SuppressWarnings("unused")
-    private void setupLogHandler(FabricLauncher launcher, boolean useTargetCl) {
-        System.setProperty("log4j2.formatMsgNoLookups", "true");
 
-        try {
-            final String logHandlerClsName = "net.fabricmc.loader.impl.game.minecraft.Log4jLogHandler";
 
-            ClassLoader previousClassLoader = Thread.currentThread().getContextClassLoader();
-            Class<?> logHandlerClass;
-
-            if (useTargetCl) {
-                Thread.currentThread().setContextClassLoader(launcher.getTargetClassLoader());
-                logHandlerClass = launcher.loadIntoTarget(logHandlerClsName);
-            } else {
-                logHandlerClass = Class.forName(logHandlerClsName);
-            }
-
-            Log.init((LogHandler) logHandlerClass.getConstructor().newInstance(), true);
-            Thread.currentThread().setContextClassLoader(previousClassLoader);
-
-            Log.info(LogCategory.GAME_PROVIDER, "Logging initialized with %s", logHandlerClsName);
-        } catch (ReflectiveOperationException e) {
-            Log.error(LogCategory.GAME_PROVIDER, "Failed to initialize logging", e);
-        }
-    }
     public static void main(String[] args) throws Exception {
         if (System.getProperty("reload") == null) {
-            String javaHome = System.getProperty("java.home");
-            String javaBin = javaHome + "/bin/java";
+            reload();
+            return;
+        }
+        launchFabric(args);
+    }
 
-            String jarName = new File(EntryPoint.class.getProtectionDomain()
-                    .getCodeSource()
-                    .getLocation()
-                    .toURI()).getName();
-            String natives =  "-Djava.library.path=../linux-x64/bin:./dependants/windows/1.8.9-natives:.dependants/macos_arm/1.8.9-natives-mac/";
-            if (System.getProperty("os.name").toLowerCase().contains("win")) {
-                natives = natives.replace(":", ";");
-            }
+    private static void reload() throws Exception {
+        String jarName = new File(EntryPoint.class.getProtectionDomain()
+                .getCodeSource()
+                .getLocation()
+                .toURI()).getName();
 
-            ProcessBuilder pb = new ProcessBuilder(
-                    javaBin,
-                    natives,
-                    "-noverify",
-                    "-XX:+DisableAttachMechanism",
-                    "-Dreload=true",
-                    "-jar",
-                    jarName
-            );
+        String javaBin = Utils.getJava();
+        String natives = Utils.getNativePath();
 
-            pb.inheritIO();
-
-            Process process = pb.start();
-            int exitCode = process.waitFor();
-            System.out.println("Child process exited with code " + exitCode);
+        if (javaBin == null || !new File(javaBin).exists()) {
+            Log.error(LogCategory.GAME_PROVIDER, "Missing Java binary");
             return;
         }
 
-        String[] launchArgs = {
+        new ProcessBuilder(
+                javaBin, natives, "-noverify", "-XX:+DisableAttachMechanism",
+                "-Dreload=true", "-jar", jarName
+        ).inheritIO().start();
+
+    }
+
+    private static void launchFabric(String[] args) {
+        String[] extraArgs = {
                 "--gameDirectory=run",
                 "-Dfabric.game.provider=loutre.betterrise.loader.LoutreGameProvider"
         };
 
-        String[] combinedArgs = new String[launchArgs.length + args.length];
-        System.arraycopy(launchArgs, 0, combinedArgs, 0, launchArgs.length);
-        System.arraycopy(args, 0, combinedArgs, launchArgs.length, args.length);
+        String[] combinedArgs = Arrays.copyOf(extraArgs, extraArgs.length + args.length);
+        System.arraycopy(args, 0, combinedArgs, extraArgs.length, args.length);
 
+        Log.info(LogCategory.GAME_PROVIDER, "Launching KnotClient");
         net.fabricmc.loader.impl.launch.knot.KnotClient.main(combinedArgs);
     }
 }

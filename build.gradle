@@ -1,3 +1,4 @@
+//file:noinspection VulnerableLibrariesLocal
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
@@ -16,21 +17,14 @@ repositories {
 }
 
 dependencies {
-    compileOnly "org.projectlombok:lombok:${lombok_version}"
-    annotationProcessor "org.projectlombok:lombok:${lombok_version}"
-
-    implementation 'org.slf4j:slf4j-api:2.0.9'
-    implementation 'org.apache.logging.log4j:log4j-slf4j-impl:2.20.0'
     implementation 'org.apache.logging.log4j:log4j-core:2.20.0'
 
-    implementation("net.fabricmc:fabric-fernflower:2.0.0")
-    implementation "net.fabricmc:fabric-loader:0.13.0"
-    implementation("net.fabricmc:sponge-mixin:0.13.0+mixin.0.8.5")
+    implementation "net.fabricmc:fabric-fernflower:2.0.0"
+    implementation "net.fabricmc:fabric-loader:${loader_version}"
+    implementation "net.fabricmc:sponge-mixin:${loader_version}+mixin.0.8.5"
     implementation "net.fabricmc:access-widener:2.1.0"
-    implementation "net.fabricmc:tiny-mappings-parser:0.2.2.14"
-    implementation 'com.google.guava:guava:32.0.1-android'
-    implementation 'com.google.code.gson:gson:2.8.9'
-    implementation "org.ow2.asm:asm:9.8"
+
+    implementation "org.ow2.asm:asm:${asm_version}"
     implementation "org.ow2.asm:asm-analysis:9.8"
     implementation "org.ow2.asm:asm-commons:9.8"
     implementation "org.ow2.asm:asm-tree:9.8"

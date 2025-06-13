@@ -32,7 +32,6 @@ public class LoutreGameTransformer extends GameTransformer {
     }
 
     private void addPatchedClass(ClassNode node) {
-        System.out.println(node.name);
         String key = node.name.replace('/', '.');
 
         if (patchedClasses.containsKey(key)) {
